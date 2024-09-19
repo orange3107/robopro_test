@@ -10,8 +10,8 @@
 #define COLSROWS 6
 
 double fill_rand_matrix(double (*matrix)[COLSROWS]){
-    double min = 0.0;
-    double max = 1.0;
+    double min = -10.0;
+    double max = 10.0;
 
     for(int i = 0; i < COLSROWS; i++){
         for(int j = 0; j < COLSROWS; j++){
