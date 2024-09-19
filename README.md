@@ -1,4 +1,4 @@
-# Compare Packages Utility
+# client-server application
 
 ## Overview
 
