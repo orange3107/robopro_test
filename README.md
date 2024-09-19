@@ -26,13 +26,13 @@ Implement a client-server application in C with the following functionality:
 
 ## Usage
 
-**Run the server**
+   **Run the server:**
+      ```bash
+      make run_server
+      ```
 
-   ```bash
-    make run_server
-
-**Run the client**
-
-   ```bash
-    make run_server
+   **Run the client:**
+      ```bash
+      make run_client
+      ```
     
