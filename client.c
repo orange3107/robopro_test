@@ -3,14 +3,15 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <signal.h>
+#include <sys/socket.h>
 
 #define PORT 8081
-#define BUFFER_SIZE 1024
 #define COLSROWS 6
 
 double fill_rand_matrix(double (*matrix)[COLSROWS]){
-    double min = -10.0;
-    double max = 10.0;
+    double min = 0.0;
+    double max = 1.0;
 
     for(int i = 0; i < COLSROWS; i++){
         for(int j = 0; j < COLSROWS; j++){
@@ -19,15 +20,12 @@ double fill_rand_matrix(double (*matrix)[COLSROWS]){
             matrix[i][j] = random_range_double;
         }
     } 
-
+    return 0;
 }
 
 int main() {
     int sock = 0;
     struct sockaddr_in serv_addr;
-    char buffer[BUFFER_SIZE] = {0};
-    const char *message = "Hello from client";
-    double timer_per = 5;
 
     // Создаем сокет
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -56,12 +54,19 @@ int main() {
 
         double matrix[COLSROWS][COLSROWS];
         fill_rand_matrix(matrix); // заполняем матрицу
-        send(sock, matrix, sizeof(matrix), 0); // отправляем матрицу
+
+        ssize_t sent_bytes = send(sock, matrix, sizeof(matrix), MSG_NOSIGNAL);
+        
+        if (sent_bytes < 0) {
+            perror("Ошибка при отправке данных. Завершение программы.\n");
+            close(sock);
+            exit(EXIT_FAILURE);  // Завершаем программу в случае ошибки
+        }
 
         printf("Отправленная матрица:\n");
         for(int i = 0; i < COLSROWS; i++){
             for(int j = 0; j < COLSROWS; j++){
-                printf("%f ", matrix[i][j]);
+                printf("%f,", matrix[i][j]);
             }
             printf("\n");
         } 

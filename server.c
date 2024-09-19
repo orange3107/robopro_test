@@ -7,56 +7,46 @@
 #define PORT 8081
 #define BUFFER_SIZE 1024
 #define COLSROWS 6
+#define DET_SIZE 5
 
-double Determinant(double** a, int n) {
-    if (n == 1)
-        return a[0][0];
-
-    if (n == 2)
-        return a[0][0] * a[1][1] - a[0][1] * a[1][0];
-
-    // Выделяем память под временную матрицу
-    double** b = (double**)malloc(n * sizeof(double*));
-    for (int i = 0; i < n; i++) {
-        b[i] = (double*)malloc((n - 1) * sizeof(double));
-    }
-
-    double d = 0;
-    int k = 1;  // Знак чередования начинается с +1
-
-    for (int i = 0; i < n; i++) {
-        clear(a, b, n, 0, i);  // Формирование подматрицы
-        d += k * a[0][i] * Determinant(b, n - 1);  // Рекурсивный вызов
-        k = -k;  // Чередование знаков
-    }
-
-    // Освобождаем память
-    for (int i = 0; i < n; i++) {
-        free(b[i]);
-    }
-    free(b);
-
-    return d;
-}
-
-// Функция для формирования подматрицы
-void clear(double** a, double** b, int n, int skipRow, int skipCol) {
+void clear_matrix(int n, double (*matrix)[n], double (*submatrix)[n-1], int skipRow, int skipCol) {
     int r = 0, c = 0;
 
     for (int i = 0; i < n; i++) {
         if (i == skipRow)
-            continue;  // Пропускаем строку
+            continue;
 
         c = 0;
         for (int j = 0; j < n; j++) {
             if (j == skipCol)
-                continue;  // Пропускаем столбец
+                continue;
 
-            b[r][c] = a[i][j];  // Копируем элемент
+            submatrix[r][c] = matrix[i][j];
             c++;
         }
         r++;
     }
+}
+
+double Determinant(int n, double (*matrix)[n]) {
+    if (n == 1)
+        return matrix[0][0];
+
+    if (n == 2)
+        return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+
+    double submatrix[n][n];
+
+    double d = 0;
+    int k = 1;
+
+    for (int i = 0; i < n; i++) {
+        clear_matrix(n, matrix, submatrix, 0, i);
+        d += k * matrix[0][i] * Determinant(n - 1, submatrix);
+        k = -k;
+    }
+
+    return d;
 }
 
 int main() {
@@ -71,6 +61,8 @@ int main() {
     double del_det = 0;
     double last_det = 0;
     int count_det = 0;
+
+    double summ_det = 0;
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("socket failed");
@@ -120,40 +112,28 @@ int main() {
             break;
         }
 
-        double** matrix_ptr = (double**)malloc(COLSROWS * sizeof(double*));
-        for (int i = 0; i < COLSROWS; i++) {
-            matrix_ptr[i] = (double*)malloc(COLSROWS * sizeof(double));
-            
-            for (int j = 0; j < COLSROWS; j++) {
-                matrix_ptr[i][j] = matrix[i][j]; // КОСТЫЛЬ)
-            }
-        }
-
-        last_det = Determinant(matrix_ptr, COLSROWS);
+        last_det = Determinant(COLSROWS, matrix);
         
-        printf("Det. = %f\n", last_det);
-        
+        //last_det = count_det + 1;
 
-        if(count_det < 4){
-            matrix_det[count_det] = last_det;
+        matrix_det[count_det % DET_SIZE] = last_det;
+        count_det++;
+        
+        summ_det += last_det;
+
+        printf("Det.= %f\n", last_det);
+
+        if(count_det < DET_SIZE){
 
             printf("Avg. det = N/A\n");
-            printf("Del. det = = N/A\n");
+            printf("Del. det = N/A\n");
 
         }
         else{
-            double summ_det = 0;
-            matrix_det[4] = last_det;
 
-            for(int i = 0; i < 4; i++){
-                summ_det += matrix_det[i];
-                matrix_det[i] = matrix_det[i+1];
-            }
-
-            summ_det += last_det;
-
-            avg_det = summ_det/5;
-            del_det = matrix_det[0];
+            summ_det -= del_det;
+            avg_det = summ_det / DET_SIZE;
+            del_det = matrix_det[count_det % DET_SIZE];
 
             printf("Avg. det = %f\n", avg_det);
             printf("Del. det = %f\n", del_det);
@@ -161,10 +141,7 @@ int main() {
         }
 
         printf("\n");
-        count_det++;
         
-        
-
     }
 
     close(new_socket);
